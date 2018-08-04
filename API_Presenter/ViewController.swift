@@ -9,7 +9,11 @@
 
 
 /*
-curl https://rest.coinapi.io/v1/assets --request GET --header "X-CoinAPI-Key: 3D49C6B5-7CA5-4B45-ADFD-A89E03A2D724"
+curl https://rest.coinapi.io/v1/assets --request GET --header "X-CoinAPI-Key: <key>"
+*/
+
+/*
+curl https://rest.coinapi.io/v1/exchangerate/OMG/USD --request GET --header "X-CoinAPI-Key: <key>"
 */
 
 import UIKit
@@ -18,6 +22,8 @@ class ViewController: UITableViewController {
 
     var symbolArray = [String] ()
     var priceArray =  [Int] ()
+    
+    let defaultSymbols = ["BTC", "CNY", "ETH", "USD", "LTC", "USDT", "KRW", "XRP", "EUR", "JPY", "BCH", "ETC", "XMR", "NEO", "EOS", "DASH", "ZEC", "TRX", "BNB", "IOTA", "DOGE", "RUB", "QTUM", "XVG", "OMG"]
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -35,13 +41,12 @@ class ViewController: UITableViewController {
         // Dispose of any resources that can be recreated.
     }
     
-    func parseJSON() {
+    func parseJSON () {
         let url = URL(string: "https://rest.coinapi.io/v1/assets")
-        
+
         var urlRequest = URLRequest(url: url!);
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("3D49C6B5-7CA5-4B45-ADFD-A89E03A2D724", forHTTPHeaderField: "X-CoinAPI-Key")
-        print(urlRequest)
         
         let task = URLSession.shared.dataTask(with: urlRequest) {(data, response, error) in
             
@@ -58,26 +63,49 @@ class ViewController: UITableViewController {
                 print("Not containing JSON")
                 return
             }
-            // To pick up where I left off: https://stackoverflow.com/questions/46852680/urlsession-doesnt-pass-authorization-key-in-header-swift-4
+            // https://stackoverflow.com/questions/46852680/urlsession-doesnt-pass-authorization-key-in-header-swift-4
             // https://docs.coinapi.io/#list-all-assets
             
 //            print(json.first)
             var top = 25, i = 0
             for jsonObj in json {
                 self.symbolArray.append(jsonObj["asset_id"] as! String)
-//                self.priceArray.append(jsonObj) Doesn't happen here.
-//                Happens in another call (after all symbols gathered) as parameters in the request for the price
                 i += 1
                 if (i >= top) {
                     break
                 }
+                
+                var urlRequest = URLRequest(url: URL(string: "https://rest.coinapi.io/v1/exchangerate/" + (jsonObj["asset_id"] as! String) + "/USD")!);
+                urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                urlRequest.setValue("3D49C6B5-7CA5-4B45-ADFD-A89E03A2D724", forHTTPHeaderField: "X-CoinAPI-Key")
+                
+                let task = URLSession.shared.dataTask(with: urlRequest) {(data, response, error) in
+                    guard error == nil else {
+                        print("returning error")
+                        return
+                    }
+                    guard let content = data else {
+                        print("not returning data")
+                        return
+                    }
+                    
+                    // TODO: Pick it up from here
+                    guard let json = (try? JSONSerialization.jsonObject(with: content, options: JSONSerialization.ReadingOptions.mutableContainers)) as? [String:Any] else {
+                        print("Not containing JSON")
+                        return
+                    }
+                    print(json)
+                }
+                
+                task.resume()
             }
-            print(self.symbolArray)
+            
             DispatchQueue.main.async {
                 self.tableView.reloadData()
             }
-            
         }
+    
+       
         
         task.resume()
     }
@@ -87,13 +115,18 @@ class ViewController: UITableViewController {
 extension ViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CoinCell", for: indexPath) as UITableViewCell
-        cell.textLabel?.text = self.symbolArray[indexPath.row]
+        let cell = tableView.dequeueReusableCell(withIdentifier: "CoinCell", for: indexPath) as! CoinCell
+        cell.symbolLabel?.text = self.symbolArray[indexPath.row]
+//        cell.priceLabel?.text = String(self.priceArray[indexPath.row])
         return cell
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return self.symbolArray.count
+    }
+    
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 75
     }
     
 }
