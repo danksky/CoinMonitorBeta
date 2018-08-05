@@ -6,8 +6,6 @@
 //  Copyright © 2018 Daniel Kawalsky. All rights reserved.
 //
 
-
-
 /*
 curl https://rest.coinapi.io/v1/assets --request GET --header "X-CoinAPI-Key: <key>"
 */
@@ -22,8 +20,6 @@ class ViewController: UITableViewController {
 
     var symbolArray = [String] ()
     var priceArray =  [Double] ()
-    
-    let defaultSymbols = ["BTC", "CNY", "ETH", "USD", "LTC", "USDT", "KRW", "XRP", "EUR", "JPY", "BCH", "ETC", "XMR", "NEO", "EOS", "DASH", "ZEC", "TRX", "BNB", "IOTA", "DOGE", "RUB", "QTUM", "XVG", "OMG"]
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -46,7 +42,7 @@ class ViewController: UITableViewController {
 
         var urlRequest = URLRequest(url: url!);
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("3D49C6B5-7CA5-4B45-ADFD-A89E03A2D724", forHTTPHeaderField: "X-CoinAPI-Key")
+        urlRequest.setValue("<mykey>", forHTTPHeaderField: "X-CoinAPI-Key")
         
         let task = URLSession.shared.dataTask(with: urlRequest) {(data, response, error) in
             
@@ -63,10 +59,6 @@ class ViewController: UITableViewController {
                 print("Not containing JSON")
                 return
             }
-            // https://stackoverflow.com/questions/46852680/urlsession-doesnt-pass-authorization-key-in-header-swift-4
-            // https://docs.coinapi.io/#list-all-assets
-            
-//            print(json.first)
             
             // Change the 'top' value before recording. Don't want to exceed limit!
             var top = 15, i = 0
