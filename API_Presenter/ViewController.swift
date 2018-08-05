@@ -21,7 +21,7 @@ import UIKit
 class ViewController: UITableViewController {
 
     var symbolArray = [String] ()
-    var priceArray =  [Int] ()
+    var priceArray =  [Double] ()
     
     let defaultSymbols = ["BTC", "CNY", "ETH", "USD", "LTC", "USDT", "KRW", "XRP", "EUR", "JPY", "BCH", "ETC", "XMR", "NEO", "EOS", "DASH", "ZEC", "TRX", "BNB", "IOTA", "DOGE", "RUB", "QTUM", "XVG", "OMG"]
     
@@ -67,37 +67,43 @@ class ViewController: UITableViewController {
             // https://docs.coinapi.io/#list-all-assets
             
 //            print(json.first)
-            var top = 25, i = 0
+            
+            // Change the 'top' value before recording. Don't want to exceed limit!
+            var top = 15, i = 0
             for jsonObj in json {
-                self.symbolArray.append(jsonObj["asset_id"] as! String)
-                i += 1
-                if (i >= top) {
-                    break
-                }
-                
-                var urlRequest = URLRequest(url: URL(string: "https://rest.coinapi.io/v1/exchangerate/" + (jsonObj["asset_id"] as! String) + "/USD")!);
-                urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                urlRequest.setValue("3D49C6B5-7CA5-4B45-ADFD-A89E03A2D724", forHTTPHeaderField: "X-CoinAPI-Key")
-                
-                let task = URLSession.shared.dataTask(with: urlRequest) {(data, response, error) in
-                    guard error == nil else {
-                        print("returning error")
-                        return
-                    }
-                    guard let content = data else {
-                        print("not returning data")
-                        return
-                    }
+                if ((jsonObj["type_is_crypto"] as! Int) == 1) {
+                    var urlRequest = URLRequest(url: URL(string: "https://rest.coinapi.io/v1/exchangerate/" + (jsonObj["asset_id"] as! String) + "/USD")!);
+                    urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    urlRequest.setValue("3D49C6B5-7CA5-4B45-ADFD-A89E03A2D724", forHTTPHeaderField: "X-CoinAPI-Key")
                     
-                    // TODO: Pick it up from here
-                    guard let json = (try? JSONSerialization.jsonObject(with: content, options: JSONSerialization.ReadingOptions.mutableContainers)) as? [String:Any] else {
-                        print("Not containing JSON")
-                        return
+                    let task = URLSession.shared.dataTask(with: urlRequest) {(data, response, error) in
+                        guard error == nil else {
+                            print("returning error")
+                            return
+                        }
+                        guard let content = data else {
+                            print("not returning data")
+                            return
+                        }
+                        
+                        guard let json = (try? JSONSerialization.jsonObject(with: content, options: JSONSerialization.ReadingOptions.mutableContainers)) as? [String:Any] else {
+                            print("Not containing JSON")
+                            return
+                        }
+                        
+                        self.symbolArray.append(json["asset_id_base"] as! String)
+                        self.priceArray.append(json["rate"] as! Double)
+                        
+                        DispatchQueue.main.async {
+                            self.tableView.reloadData()
+                        }
                     }
-                    print(json)
+                    task.resume()
+                    i += 1
+                    if (i >= top) {
+                        break
+                    }
                 }
-                
-                task.resume()
             }
             
             DispatchQueue.main.async {
@@ -117,7 +123,9 @@ extension ViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CoinCell", for: indexPath) as! CoinCell
         cell.symbolLabel?.text = self.symbolArray[indexPath.row]
-//        cell.priceLabel?.text = String(self.priceArray[indexPath.row])
+        if (self.priceArray.count >= indexPath.row+1) {
+            cell.priceLabel?.text = String(self.priceArray[indexPath.row])
+        }
         return cell
     }
     
